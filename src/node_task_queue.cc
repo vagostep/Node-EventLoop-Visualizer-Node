@@ -106,6 +106,9 @@ void PromiseRejectCallback(PromiseRejectMessage message) {
         async_id, trigger_async_id, promise);
   }
 
+  
+      // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
+      fflush(stdout);
   USE(callback->Call(
       env->context(), Undefined(isolate), arraysize(args), args));
 

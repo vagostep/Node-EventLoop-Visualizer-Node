@@ -87,4 +87,15 @@ static inline void uv__queue_remove(struct uv__queue* q) {
   q->next->prev = q->prev;
 }
 
+static inline int uv__queue_size(struct uv__queue* q) {
+  int count = 0;
+  struct uv__queue* current = q;
+
+  while (current != NULL) {
+      count++;
+      current = current->next;
+  }
+  return count;
+}
+
 #endif /* QUEUE_H_ */

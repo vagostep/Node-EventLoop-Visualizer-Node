@@ -70,7 +70,7 @@ int uv_timer_start(uv_timer_t* handle,
                    uint64_t timeout,
                    uint64_t repeat) {
   uint64_t clamped_timeout;
-
+  // printf("uv_timer_start - timeout: %lld -> timer.c\n", timeout);
   if (uv__is_closing(handle) || cb == NULL)
     return UV_EINVAL;
 
@@ -167,7 +167,7 @@ void uv__run_timers(uv_loop_t* loop) {
   uv_timer_t* handle;
   struct uv__queue* queue_node;
   struct uv__queue ready_queue;
-
+  // printf("uv__run_timers -> timer.c\n");
   uv__queue_init(&ready_queue);
 
   for (;;) {
@@ -180,6 +180,7 @@ void uv__run_timers(uv_loop_t* loop) {
       break;
 
     uv_timer_stop(handle);
+    // printf("uv__queue_insert_tail -> timer.c\n");
     uv__queue_insert_tail(&ready_queue, &handle->node.queue);
   }
 
@@ -190,6 +191,7 @@ void uv__run_timers(uv_loop_t* loop) {
     handle = container_of(queue_node, uv_timer_t, node.queue);
 
     uv_timer_again(handle);
+    // printf("calling callback -> timer.c\n");
     handle->timer_cb(handle);
   }
 }
