@@ -87,12 +87,14 @@ suite('StatementSync.prototype.all()', () => {
 suite('StatementSync.prototype.iterate()', () => {
   test('executes a query and returns an empty iterator on no results', (t) => {
     const db = new DatabaseSync(nextDb());
+    t.after(() => { db.close(); });
     const stmt = db.prepare('CREATE TABLE storage(key TEXT, val TEXT)');
     t.assert.deepStrictEqual(stmt.iterate().toArray(), []);
   });
 
   test('executes a query and returns all results', (t) => {
     const db = new DatabaseSync(nextDb());
+    t.after(() => { db.close(); });
     let stmt = db.prepare('CREATE TABLE storage(key TEXT, val TEXT)');
     t.assert.deepStrictEqual(stmt.run(), { changes: 0, lastInsertRowid: 0 });
     stmt = db.prepare('INSERT INTO storage (key, val) VALUES (?, ?)');
@@ -167,6 +169,25 @@ suite('StatementSync.prototype.run()', () => {
       errcode: 1299,
       errstr: 'constraint failed',
     });
+  });
+
+  test('returns correct metadata when using RETURNING', (t) => {
+    const db = new DatabaseSync(':memory:');
+    const setup = db.exec(
+      'CREATE TABLE data(key INTEGER PRIMARY KEY, val INTEGER NOT NULL) STRICT;'
+    );
+    t.assert.strictEqual(setup, undefined);
+    const sql = 'INSERT INTO data (key, val) VALUES ($k, $v) RETURNING key';
+    const stmt = db.prepare(sql);
+    t.assert.deepStrictEqual(
+      stmt.run({ k: 1, v: 10 }), { changes: 1, lastInsertRowid: 1 }
+    );
+    t.assert.deepStrictEqual(
+      stmt.run({ k: 2, v: 20 }), { changes: 1, lastInsertRowid: 2 }
+    );
+    t.assert.deepStrictEqual(
+      stmt.run({ k: 3, v: 30 }), { changes: 1, lastInsertRowid: 3 }
+    );
   });
 });
 

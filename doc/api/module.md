@@ -22,7 +22,7 @@ added:
   - v8.10.0
   - v6.13.0
 changes:
-  - version: REPLACEME
+  - version: v23.5.0
     pr-url: https://github.com/nodejs/node/pull/56185
     description: The list now also contains prefix-only modules.
 -->
@@ -69,7 +69,9 @@ const siblingModule = require('./sibling-module');
 ### `module.findPackageJSON(specifier[, base])`
 
 <!-- YAML
-added: v23.2.0
+added:
+  - v23.2.0
+  - v22.14.0
 -->
 
 > Stability: 1.1 - Active Development
@@ -81,13 +83,17 @@ added: v23.2.0
 * `base` {string|URL} The absolute location (`file:` URL string or FS path) of the
   containing  module. For CJS, use `__filename` (not `__dirname`!); for ESM, use
   `import.meta.url`. You do not need to pass it if `specifier` is an `absolute specifier`.
-* Returns: {string|undefined} A path if the `package.json` is found. When `startLocation`
+* Returns: {string|undefined} A path if the `package.json` is found. When `specifier`
   is a package, the package's root `package.json`; when a relative or unresolved, the closest
-  `package.json` to the `startLocation`.
+  `package.json` to the `specifier`.
 
-> **Caveat**: Do not use this to try to determine module format. There are many things effecting
+> **Caveat**: Do not use this to try to determine module format. There are many things affecting
 > that determination; the `type` field of package.json is the _least_ definitive (ex file extension
-> superceeds it, and a loader hook superceeds that).
+> supersedes it, and a loader hook supersedes that).
+
+> **Caveat**: This currently leverages only the built-in default resolver; if
+> [`resolve` customization hooks][resolve hook] are registered, they will not affect the resolution.
+> This may change in the future.
 
 ```text
 /path/to/project
@@ -174,6 +180,13 @@ added:
   - v18.19.0
 changes:
   - version:
+    - v23.6.1
+    - v22.13.1
+    - v20.18.2
+    pr-url: https://github.com/nodejs-private/node-private/pull/629
+    description: Using this feature with the permission model enabled requires
+                 passing `--allow-worker`.
+  - version:
     - v20.8.0
     - v18.19.0
     pr-url: https://github.com/nodejs/node/pull/49655
@@ -201,10 +214,12 @@ changes:
 Register a module that exports [hooks][] that customize Node.js module
 resolution and loading behavior. See [Customization hooks][].
 
+This feature requires `--allow-worker` if used with the [Permission Model][].
+
 ### `module.registerHooks(options)`
 
 <!-- YAML
-added: REPLACEME
+added: v23.5.0
 -->
 
 > Stability: 1.1 - Active development
@@ -219,7 +234,9 @@ See [Customization hooks][].
 ### `module.stripTypeScriptTypes(code[, options])`
 
 <!-- YAML
-added: v23.2.0
+added:
+  - v23.2.0
+  - v22.13.0
 -->
 
 > Stability: 1.1 - Active development
@@ -530,7 +547,7 @@ added: v22.8.0
 <!-- YAML
 added: v8.8.0
 changes:
-  - version: REPLACEME
+  - version: v23.5.0
     pr-url: https://github.com/nodejs/node/pull/55698
     description: Add support for synchronous and in-thread hooks.
   - version:
@@ -863,7 +880,7 @@ child workers by default.
 #### Synchronous hooks accepted by `module.registerHooks()`
 
 <!-- YAML
-added: REPLACEME
+added: v23.5.0
 -->
 
 > Stability: 1.1 - Active development
@@ -992,7 +1009,7 @@ register('./path-to-my-hooks.js', {
 
 <!-- YAML
 changes:
-  - version: REPLACEME
+  - version: v23.5.0
     pr-url: https://github.com/nodejs/node/pull/55698
     description: Add support for synchronous and in-thread hooks.
   - version:
@@ -1017,9 +1034,6 @@ changes:
     description: Add support for import assertions.
 -->
 
-> Stability: 1.2 - Release candidate (asynchronous version)
-> Stability: 1.1 - Active development (synchronous version)
-
 * `specifier` {string}
 * `context` {Object}
   * `conditions` {string\[]} Export conditions of the relevant `package.json`
@@ -1030,13 +1044,14 @@ changes:
 * `nextResolve` {Function} The subsequent `resolve` hook in the chain, or the
   Node.js default `resolve` hook after the last user-supplied `resolve` hook
   * `specifier` {string}
-  * `context` {Object}
+  * `context` {Object|undefined} When omitted, the defaults are provided. When provided, defaults
+    are merged in with preference to the provided properties.
 * Returns: {Object|Promise} The asynchronous version takes either an object containing the
   following properties, or a `Promise` that will resolve to such an object. The
   synchronous version only accepts an object returned synchronously.
-  * `format` {string|null|undefined} A hint to the load hook (it might be
-    ignored)
-    `'builtin' | 'commonjs' | 'json' | 'module' | 'wasm'`
+  * `format` {string|null|undefined} A hint to the `load` hook (it might be ignored). It can be a
+    module format (such as `'commonjs'` or `'module'`) or an arbitrary value like `'css'` or
+    `'yaml'`.
   * `importAttributes` {Object|undefined} The import attributes to use when
     caching the module (optional; if excluded the input will be used)
   * `shortCircuit` {undefined|boolean} A signal that this hook intends to
@@ -1117,7 +1132,7 @@ function resolve(specifier, context, nextResolve) {
 
 <!-- YAML
 changes:
-  - version: REPLACEME
+  - version: v23.5.0
     pr-url: https://github.com/nodejs/node/pull/55698
     description: Add support for synchronous and in-thread version.
   - version: v20.6.0
@@ -1132,19 +1147,22 @@ changes:
       its return.
 -->
 
-> Stability: 1.2 - Release candidate (asynchronous version)
-> Stability: 1.1 - Active development (synchronous version)
-
 * `url` {string} The URL returned by the `resolve` chain
 * `context` {Object}
   * `conditions` {string\[]} Export conditions of the relevant `package.json`
   * `format` {string|null|undefined} The format optionally supplied by the
-    `resolve` hook chain
+    `resolve` hook chain. This can be any string value as an input; input values do not need to
+    conform to the list of acceptable return values described below.
   * `importAttributes` {Object}
 * `nextLoad` {Function} The subsequent `load` hook in the chain, or the
   Node.js default `load` hook after the last user-supplied `load` hook
   * `url` {string}
-  * `context` {Object}
+  * `context` {Object|undefined} When omitted, defaults are provided. When provided, defaults are
+    merged in with preference to the provided properties. In the default `nextLoad`, if
+    the module pointed to by `url` does not have explicit module type information,
+    `context.format` is mandatory.
+    <!-- TODO(joyeecheung): make it at least optionally non-mandatory by allowing
+         JS-style/TS-style module detection when the format is simply unknown -->
 * Returns: {Object|Promise} The asynchronous version takes either an object containing the
   following properties, or a `Promise` that will resolve to such an object. The
   synchronous version only accepts an object returned synchronously.
@@ -1159,13 +1177,14 @@ validating the import attributes.
 
 The final value of `format` must be one of the following:
 
-| `format`     | Description                    | Acceptable types for `source` returned by `load`                           |
-| ------------ | ------------------------------ | -------------------------------------------------------------------------- |
-| `'builtin'`  | Load a Node.js builtin module  | Not applicable                                                             |
-| `'commonjs'` | Load a Node.js CommonJS module | { [`string`][], [`ArrayBuffer`][], [`TypedArray`][], `null`, `undefined` } |
-| `'json'`     | Load a JSON file               | { [`string`][], [`ArrayBuffer`][], [`TypedArray`][] }                      |
-| `'module'`   | Load an ES module              | { [`string`][], [`ArrayBuffer`][], [`TypedArray`][] }                      |
-| `'wasm'`     | Load a WebAssembly module      | { [`ArrayBuffer`][], [`TypedArray`][] }                                    |
+| `format`     | Description                    | Acceptable types for `source` returned by `load`   |
+| ------------ | ------------------------------ | -------------------------------------------------- |
+| `'addon'`    | Load a Node.js addon           | {null}                                             |
+| `'builtin'`  | Load a Node.js builtin module  | {null}                                             |
+| `'commonjs'` | Load a Node.js CommonJS module | {string\|ArrayBuffer\|TypedArray\|null\|undefined} |
+| `'json'`     | Load a JSON file               | {string\|ArrayBuffer\|TypedArray}                  |
+| `'module'`   | Load an ES module              | {string\|ArrayBuffer\|TypedArray}                  |
+| `'wasm'`     | Load a WebAssembly module      | {ArrayBuffer\|TypedArray}                          |
 
 The value of `source` is ignored for type `'builtin'` because currently it is
 not possible to replace the value of a Node.js builtin (core) module.
@@ -1201,7 +1220,7 @@ opt-in to using the non-default behavior:
 import { readFile } from 'node:fs/promises';
 
 // Asynchronous version accepted by module.register(). This fix is not needed
-// for the synchronous version accepted by module.registerSync().
+// for the synchronous version accepted by module.registerHooks().
 export async function load(url, context, nextLoad) {
   const result = await nextLoad(url, context);
   if (result.format === 'commonjs') {
@@ -1222,8 +1241,8 @@ of module format.
 
 > These types all correspond to classes defined in ECMAScript.
 
-* The specific [`ArrayBuffer`][] object is a [`SharedArrayBuffer`][].
-* The specific [`TypedArray`][] object is a [`Uint8Array`][].
+* The specific {ArrayBuffer} object is a {SharedArrayBuffer}.
+* The specific {TypedArray} object is a {Uint8Array}.
 
 If the source value of a text-based format (i.e., `'json'`, `'module'`)
 is not a string, it is converted to a string using [`util.TextDecoder`][].
@@ -1341,36 +1360,32 @@ transpiler hooks should only be used for development and testing purposes.
 ```mjs
 // coffeescript-hooks.mjs
 import { readFile } from 'node:fs/promises';
-import { dirname, extname, resolve as resolvePath } from 'node:path';
-import { cwd } from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { findPackageJSON } from 'node:module';
 import coffeescript from 'coffeescript';
 
 const extensionsRegex = /\.(coffee|litcoffee|coffee\.md)$/;
 
 export async function load(url, context, nextLoad) {
   if (extensionsRegex.test(url)) {
-    // CoffeeScript files can be either CommonJS or ES modules, so we want any
-    // CoffeeScript file to be treated by Node.js the same as a .js file at the
-    // same location. To determine how Node.js would interpret an arbitrary .js
-    // file, search up the file system for the nearest parent package.json file
-    // and read its "type" field.
-    const format = await getPackageType(url);
-
-    const { source: rawSource } = await nextLoad(url, { ...context, format });
+    // CoffeeScript files can be either CommonJS or ES modules. Use a custom format
+    // to tell Node.js not to detect its module type.
+    const { source: rawSource } = await nextLoad(url, { ...context, format: 'coffee' });
     // This hook converts CoffeeScript source code into JavaScript source code
     // for all imported CoffeeScript files.
     const transformedSource = coffeescript.compile(rawSource.toString(), url);
 
+    // To determine how Node.js would interpret the transpilation result,
+    // search up the file system for the nearest parent package.json file
+    // and read its "type" field.
     return {
-      format,
+      format: await getPackageType(url),
       shortCircuit: true,
       source: transformedSource,
     };
   }
 
   // Let Node.js handle all other URLs.
-  return nextLoad(url);
+  return nextLoad(url, context);
 }
 
 async function getPackageType(url) {
@@ -1381,25 +1396,12 @@ async function getPackageType(url) {
   // this simple truthy check for whether `url` contains a file extension will
   // work for most projects but does not cover some edge-cases (such as
   // extensionless files or a url ending in a trailing space)
-  const isFilePath = !!extname(url);
-  // If it is a file path, get the directory it's in
-  const dir = isFilePath ?
-    dirname(fileURLToPath(url)) :
-    url;
-  // Compose a file path to a package.json in the same directory,
-  // which may or may not exist
-  const packagePath = resolvePath(dir, 'package.json');
-  // Try to read the possibly nonexistent package.json
-  const type = await readFile(packagePath, { encoding: 'utf8' })
-    .then((filestring) => JSON.parse(filestring).type)
-    .catch((err) => {
-      if (err?.code !== 'ENOENT') console.error(err);
-    });
-  // If package.json existed and contained a `type` field with a value, voilà
-  if (type) return type;
-  // Otherwise, (if not at the root) continue checking the next directory up
-  // If at the root, stop and return false
-  return dir.length > 1 && getPackageType(resolvePath(dir, '..'));
+  const pJson = findPackageJSON(url);
+
+  return readFile(pJson, 'utf8')
+    .then(JSON.parse)
+    .then((json) => json?.type)
+    .catch(() => undefined);
 }
 ```
 
@@ -1407,46 +1409,38 @@ async function getPackageType(url) {
 
 ```mjs
 // coffeescript-sync-hooks.mjs
-import { readFileSync } from 'node:fs/promises';
-import { registerHooks } from 'node:module';
-import { dirname, extname, resolve as resolvePath } from 'node:path';
-import { cwd } from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { registerHooks, findPackageJSON } from 'node:module';
 import coffeescript from 'coffeescript';
 
 const extensionsRegex = /\.(coffee|litcoffee|coffee\.md)$/;
 
 function load(url, context, nextLoad) {
   if (extensionsRegex.test(url)) {
-    const format = getPackageType(url);
-
-    const { source: rawSource } = nextLoad(url, { ...context, format });
+    const { source: rawSource } = nextLoad(url, { ...context, format: 'coffee' });
     const transformedSource = coffeescript.compile(rawSource.toString(), url);
 
     return {
-      format,
+      format: getPackageType(url),
       shortCircuit: true,
       source: transformedSource,
     };
   }
 
-  return nextLoad(url);
+  return nextLoad(url, context);
 }
 
 function getPackageType(url) {
-  const isFilePath = !!extname(url);
-  const dir = isFilePath ? dirname(fileURLToPath(url)) : url;
-  const packagePath = resolvePath(dir, 'package.json');
-
-  let type;
-  try {
-    const filestring = readFileSync(packagePath, { encoding: 'utf8' });
-    type = JSON.parse(filestring).type;
-  } catch (err) {
-    if (err?.code !== 'ENOENT') console.error(err);
+  const pJson = findPackageJSON(url);
+  if (!pJson) {
+    return undefined;
   }
-  if (type) return type;
-  return dir.length > 1 && getPackageType(resolvePath(dir, '..'));
+  try {
+    const file = readFileSync(pJson, 'utf-8');
+    return JSON.parse(file)?.type;
+  } catch {
+    return undefined;
+  }
 }
 
 registerHooks({ load });
@@ -1467,6 +1461,21 @@ console.log "Brought to you by Node.js version #{version}"
 # scream.coffee
 export scream = (str) -> str.toUpperCase()
 ```
+
+For the sake of running the example, add a `package.json` file containing the
+module type of the CoffeeScript files.
+
+```json
+{
+  "type": "module"
+}
+```
+
+This is only for running the example. In real world loaders, `getPackageType()` must be
+able to return an `format` known to Node.js even in the absence of an explicit type in a
+`package.json`, or otherwise the `nextLoad` call would throw `ERR_UNKNOWN_FILE_EXTENSION`
+(if undefined) or `ERR_UNKNOWN_MODULE_FORMAT` (if it's not a known format listed in
+the [load hook][] documentation).
 
 With the preceding hooks modules, running
 `node --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register(pathToFileURL("./coffeescript-hooks.mjs"));' ./main.coffee`
@@ -1577,6 +1586,22 @@ import { findSourceMap, SourceMap } from 'node:module';
 const { findSourceMap, SourceMap } = require('node:module');
 ```
 
+### `module.getSourceMapsSupport()`
+
+<!-- YAML
+added:
+  - v23.7.0
+  - v22.14.0
+-->
+
+* Returns: {Object}
+  * `enabled` {boolean} If the source maps support is enabled
+  * `nodeModules` {boolean} If the support is enabled for files in `node_modules`.
+  * `generatedCode` {boolean} If the support is enabled for generated code from `eval` or `new Function`.
+
+This method returns whether the [Source Map v3][Source Map] support for stack
+traces is enabled.
+
 <!-- Anchors to make sure old links find a target -->
 
 <a id="module_module_findsourcemap_path_error"></a>
@@ -1596,6 +1621,33 @@ added:
 `path` is the resolved path for the file for which a corresponding source map
 should be fetched.
 
+### `module.setSourceMapsSupport(enabled[, options])`
+
+<!-- YAML
+added:
+  - v23.7.0
+  - v22.14.0
+-->
+
+* `enabled` {boolean} Enable the source map support.
+* `options` {Object} Optional
+  * `nodeModules` {boolean} If enabling the support for files in
+    `node_modules`. **Default:** `false`.
+  * `generatedCode` {boolean} If enabling the support for generated code from
+    `eval` or `new Function`. **Default:** `false`.
+
+This function enables or disables the [Source Map v3][Source Map] support for
+stack traces.
+
+It provides same features as launching Node.js process with commandline options
+`--enable-source-maps`, with additional options to alter the support for files
+in `node_modules` or generated codes.
+
+Only source maps in JavaScript files that are loaded after source maps has been
+enabled will be parsed and loaded. Preferably, use the commandline options
+`--enable-source-maps` to avoid losing track of source maps of modules loaded
+before this API call.
+
 ### Class: `module.SourceMap`
 
 <!-- YAML
@@ -1605,6 +1657,13 @@ added:
 -->
 
 #### `new SourceMap(payload[, { lineLengths }])`
+
+<!-- YAML
+changes:
+  - version: v20.5.0
+    pr-url: https://github.com/nodejs/node/pull/48461
+    description: Add support for `lineLengths`.
+-->
 
 * `payload` {Object}
 * `lineLengths` {number\[]}
@@ -1668,6 +1727,12 @@ columnNumber)`
 
 #### `sourceMap.findOrigin(lineNumber, columnNumber)`
 
+<!-- YAML
+added:
+  - v20.4.0
+  - v18.18.0
+-->
+
 * `lineNumber` {number} The 1-indexed line number of the call
   site in the generated source
 * `columnNumber` {number} The 1-indexed column number
@@ -1695,6 +1760,8 @@ returned object contains the following keys:
 [Conditional exports]: packages.md#conditional-exports
 [Customization hooks]: #customization-hooks
 [ES Modules]: esm.md
+[Permission Model]: permissions.md#permission-model
+[Source Map]: https://sourcemaps.info/spec.html
 [Source map v3 format]: https://sourcemaps.info/spec.html#h.mofvlxcwqzej
 [V8 JavaScript code coverage]: https://v8project.blogspot.com/2017/12/javascript-code-coverage.html
 [V8 code cache]: https://v8.dev/blog/code-caching-for-devs
@@ -1702,14 +1769,10 @@ returned object contains the following keys:
 [`--enable-source-maps`]: cli.md#--enable-source-maps
 [`--import`]: cli.md#--importmodule
 [`--require`]: cli.md#-r---require-module
-[`ArrayBuffer`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer
 [`NODE_COMPILE_CACHE=dir`]: cli.md#node_compile_cachedir
 [`NODE_DISABLE_COMPILE_CACHE=1`]: cli.md#node_disable_compile_cache1
 [`NODE_V8_COVERAGE=dir`]: cli.md#node_v8_coveragedir
-[`SharedArrayBuffer`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer
 [`SourceMap`]: #class-modulesourcemap
-[`TypedArray`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray
-[`Uint8Array`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array
 [`initialize`]: #initialize
 [`module.constants.compileCacheStatus`]: #moduleconstantscompilecachestatus
 [`module.enableCompileCache()`]: #moduleenablecompilecachecachedir
@@ -1719,7 +1782,6 @@ returned object contains the following keys:
 [`os.tmpdir()`]: os.md#ostmpdir
 [`registerHooks`]: #moduleregisterhooksoptions
 [`register`]: #moduleregisterspecifier-parenturl-options
-[`string`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String
 [`util.TextDecoder`]: util.md#class-utiltextdecoder
 [chain]: #chaining
 [hooks]: #customization-hooks
