@@ -452,13 +452,37 @@ int getCurrentRun(void) {
   return ++runs;
 }
 
+int getUVLoopCount(uv_loop_t* loop) {
+  uv_metrics_t metrics;
+
+  uv_metrics_info(loop, &metrics);
+
+  return metrics.loop_count;
+}
+
+int getUVLoopEvents(uv_loop_t* loop) {
+  uv_metrics_t metrics;
+
+  uv_metrics_info(loop, &metrics);
+
+  return metrics.events;
+}
+
+int getUVLoopEventsWaiting(uv_loop_t* loop) {
+  uv_metrics_t metrics;
+
+  uv_metrics_info(loop, &metrics);
+
+  return metrics.events_waiting;
+}
+
 int uv_run(uv_loop_t* loop, uv_run_mode mode) {
   int timeout;
   int r;
   int can_sleep;
 
   int currentRun = getCurrentRun();
-  printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopStart'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+  printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopStart'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
   // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
   fflush(stdout);
 
@@ -472,7 +496,7 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
    * execution order of the conceptual event loop. */
   if (mode == UV_RUN_DEFAULT && r != 0 && loop->stop_flag == 0) {
     uv__update_time(loop);
-        printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopTimers'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+        printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopTimers'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
     // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
     fflush(stdout);
     uv__run_timers(loop);
@@ -483,11 +507,11 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
         uv__queue_empty(&loop->pending_queue) &&
         uv__queue_empty(&loop->idle_handles);
 
-    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopPendingCallbacks'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopPendingCallbacks'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
     // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
     fflush(stdout);
     uv__run_pending(loop);
-    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopIdlePrepare'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopIdlePrepare'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
     fflush(stdout);
     uv__run_idle(loop);
     uv__run_prepare(loop);
@@ -498,11 +522,11 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
 
     uv__metrics_inc_loop_count(loop);
 
-    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopPoll'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopPoll'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
     fflush(stdout);
     uv__io_poll(loop, timeout);
 
-    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopPendingCallbacks'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopPendingCallbacks'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
     fflush(stdout);
     /* Process immediate callbacks (e.g. write_cb) a small fixed number of
      * times to avoid loop starvation.*/
@@ -516,17 +540,17 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
      */
     uv__metrics_update_idle_time(loop);
 
-    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopCheck'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopCheck'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
     // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
     fflush(stdout);
     uv__run_check(loop);
-    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopCloseCallbacks'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopCloseCallbacks'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
     // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
     fflush(stdout);
     uv__run_closing_handles(loop);
 
     uv__update_time(loop);
-    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopTimers'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopTimers'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
     // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
     fflush(stdout);
     uv__run_timers(loop);
@@ -542,7 +566,7 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
   if (loop->stop_flag != 0)
     loop->stop_flag = 0;
 
-  printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopFinish'; Date: '%lld'\n", UVModeToString(mode), currentRun, getDateMilliseconds());
+  printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopFinish'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
   // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
   fflush(stdout);
   return r;
