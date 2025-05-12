@@ -482,7 +482,7 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
   int can_sleep;
 
   int currentRun = getCurrentRun();
-  printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopStart'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
+  printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopStart'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
   // OBLIGA A IMPRIMIR INMEDIATAMENTE EN EL STDOUT
   fflush(stdout);
 
