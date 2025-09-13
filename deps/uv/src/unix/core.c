@@ -526,8 +526,10 @@ int uv_run(uv_loop_t* loop, uv_run_mode mode) {
     fflush(stdout);
     uv__io_poll(loop, timeout);
 
-    printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopPendingCallbacks'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
-    fflush(stdout);
+    if (!uv__queue_empty(&loop->pending_queue)) {
+      printf("[event_loop] Type: '%s';  Run: '%d'; Phase: 'EventLoopPendingCallbacks'; Date: '%lld'; LoopCount: '%d'; LoopEvents: '%d'; LoopEventsWaiting: '%d'\n", UVModeToString(mode), currentRun, getDateMilliseconds(), getUVLoopCount(loop), getUVLoopEvents(loop), getUVLoopEventsWaiting(loop));
+      fflush(stdout);
+    }
     /* Process immediate callbacks (e.g. write_cb) a small fixed number of
      * times to avoid loop starvation.*/
     for (r = 0; r < 8 && !uv__queue_empty(&loop->pending_queue); r++)
